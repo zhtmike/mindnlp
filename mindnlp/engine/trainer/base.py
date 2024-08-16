@@ -455,19 +455,11 @@ class Trainer:
         opt_model = self.model
 
         if self.optimizer is None:
-            decay_parameters = self.get_decay_parameter_names(opt_model)
+            #HACK #FIXME: a temporal fix for pynative training when parameters has names, split into w/wo group later
             optimizer_grouped_parameters = [
                 {
-                    "params": [
-                        p for p in opt_model.parameters() if (p.name in decay_parameters and p.requires_grad)
-                    ],
+                    "params": tuple(opt_model.trainable_parameters()),
                     "weight_decay": self.args.weight_decay,
-                },
-                {
-                    "params": [
-                        p for p in opt_model.parameters() if (p.name not in decay_parameters and p.requires_grad)
-                    ],
-                    "weight_decay": 0.0,
                 },
             ]
 
@@ -1131,10 +1123,12 @@ MindSpore's `load_checkpoint` function.
                     # Gradient clipping
                     if args.max_grad_norm is not None and args.max_grad_norm > 0:
                         # deepspeed does its own clipping
-                        _grad_norm = nn.utils.clip_grad_norm_(
-                            grads,
-                            args.max_grad_norm,
-                        )
+                        # HACK: no need
+                        # _grad_norm = nn.utils.clip_grad_norm_(
+                        #     grads,
+                        #     args.max_grad_norm,
+                        # )
+                        pass
                     # Optimizer step
                     self.optimizer.step(grads)
 
@@ -1379,7 +1373,7 @@ indicating whether to prefer safe tensors.
             return self.compute_loss(model, inputs)
 
         if getattr(self, 'grad_fn', None) is None or self.model_reload:
-            self.grad_fn = mindspore.value_and_grad(forward, None, tuple(model.parameters()))
+            self.grad_fn = mindspore.value_and_grad(forward, None, tuple(model.trainable_parameters()))
 
         loss, grads = self.grad_fn(inputs)
 

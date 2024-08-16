@@ -729,7 +729,11 @@ class LlamaModel(LlamaPreTrainedModel):
 
 
         dtype = input_tensor.dtype
-        min_dtype = float(ops.finfo(dtype).min)
+        # HACK: fix error for 910* MS2.3.1
+        if dtype == mindspore.bfloat16:
+            min_dtype = float.fromhex("-0x1.fe00000000000p+127")
+        else:
+            min_dtype = float(ops.finfo(dtype).min)
         sequence_length = input_tensor.shape[1]
         if using_static_cache:
             target_length = past_key_values.get_max_length()
